@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Get your IP addresses</title>
+  <style>
+    h1 {
+      text-align: center;
+    }
+    main {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      justify-content: center
+    }
+    section {
+      background-color: #EEE;
+      padding: 16px;
+      border-radius: 8px;
+      flex-basis: 300px;
+      min-height: 120px;
+    }
+    h2 {
+      font-size: 16px;
+    }
+    iframe {
+      border: 0;
+      width: 300px;
+      height: 80px;
+    }
+    p {
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+<h1>Your IP addresses</h1>
+<p>Every http request is wrapped by sandboxed iframe, no cookie allowed. <a href="https://github.com/revonia/ip">View source code on github</a></p>
+<main>
+  <section>
+    <h2>IP from tool.lu 🇨🇳</h2>
+    <iframe
+            style="height: 126px"
+            referrerpolicy="no-referrer"
+            sandbox
+            src="data:text/html,<style>body{background:url('https://tool.lu/netcard/') center/cover no-repeat;padding:0;margin:0;overflow:hidden}</style>"
+    ></iframe>
+  </section>
+  <section>
+    <h2>IP from ipip.net 🇨🇳</h2>
+    <iframe
+            referrerpolicy="no-referrer"
+            sandbox
+            src="https://myip.ipip.net/"
+    ></iframe>
+  </section>
+  <section>
+    <h2>IP from qq.com stun 🇨🇳</h2>
+    <code id="qq_com">Loading...</code>
+  </section>
+  <section>
+    <h2>IP from ipify.org 🇺🇸</h2>
+    <iframe
+            referrerpolicy="no-referrer"
+            sandbox
+            src="https://api.ipify.org"
+    ></iframe>
+  </section>
+  <section>
+    <h2>IP from ifconfig.me (google server) 🇺🇸</h2>
+    <iframe
+            referrerpolicy="no-referrer"
+            sandbox
+            src="https://ifconfig.me/ip"
+    ></iframe>
+  </section>
+  <section>
+    <h2>IP from cloudflare worker 🌎</h2>
+    <iframe
+      referrerpolicy="no-referrer"
+      sandbox
+      src="https://frosty-snow-4be1.xtest.workers.dev/"
+    ></iframe>
+  </section>
+  <section>
+    <h2>IP from google stun 🌎</h2>
+    <code id="google_stun">Loading...</code>
+  </section>
+  <section>
+    <h2>IP from syncthing.net stun 🌎</h2>
+    <code id="syncthing_net">Loading...</code>
+  </section>
+</main>
+<script>
+  // test is private ip address
+  const privateIpRegex = /(^10\.)|(^172\.1[6-9]\.)|(^172\.2[0-9]\.)|(^172\.3[0-1]\.)|(^192\.168\.)/
+  // test is private ipv6 address
+  const privateIpv6Regex = /(^fe80:)|(^::1$)|(^::$)|(^fc00:)|(^fd00:)/
+  const map = new Map()
+  async function getIpByStun(iceServers, targetId) {
+    const conn = new RTCPeerConnection({iceServers})
+    conn.onicecandidate = (event) => {
+      if (event.candidate && event.candidate.address) {
+        const ip = event.candidate.address
+        // ipv4 or ipv6 regex
+        const regex = /([0-9]{1,3}\.){3}[0-9]{1,3}|([0-9a-f]{1,4}:){7}[0-9a-f]{1,4}/
+        if (regex.exec(ip)) {
+
+          if (privateIpRegex.test(ip) || privateIpv6Regex.test(ip)) {
+            return
+          }
+
+          let set = map.get(targetId)
+          if (!set) {
+            set = new Set()
+            map.set(targetId, set)
+          }
+          set.add(ip)
+          document.getElementById(targetId).innerHTML = Array.from(set).join('<br/>')
+        }
+      }
+    }
+
+    const offer = await conn.createOffer({
+      offerToReceiveAudio: true,
+    })
+    await conn.setLocalDescription(offer)
+  }
+
+  function start() {
+    getIpByStun([
+      {
+        urls: 'stun:stun.l.google.com:19302'
+      },
+      {
+        urls: 'stun:stun1.l.google.com:19302'
+      }
+    ], 'google_stun')
+
+    getIpByStun([
+      {
+        urls: 'stun:stun.syncthing.net:3478'
+      }
+    ], 'syncthing_net')
+
+    getIpByStun([
+      {
+        urls: 'stun:stun.qq.com:3478'
+      }
+    ], 'qq_com')
+  }
+  start()
+</script>
+</body>
+</html>
